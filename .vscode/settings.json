@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "queue.h": "c",
+        "stdbool.h": "c"
+    },
+    "C_Cpp.errorSquiggles": "enabled"
+}
