@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "Queue.h"
+#include "Utility.h"
 
 void initializeQueue(Queue *q) {
     q->front = q->rear = NULL;
@@ -10,7 +11,7 @@ int isEmpty(Queue *q) {
     return q->front == NULL;
 }
 
-void enqueue(Queue *q, PCB* data) {
+void enqueue(Queue *q, KeyPointer* data) {
     Node *newNode = (Node *)malloc(sizeof(Node));
     if (!newNode) {
         printf("Memory allocation error\n");
@@ -25,22 +26,22 @@ void enqueue(Queue *q, PCB* data) {
         q->rear->next = newNode;
         q->rear = newNode;
     }
-    printf("Inserted %d\n", data->processID);
+    printf("Inserted %s\n", data->value);
 }
 
-PCB* dequeue(Queue *q) {
+KeyPointer* dequeue(Queue *q) {
     if (isEmpty(q)) {
         printf("Queue is empty!\n");
         return NULL;
     }
     Node *temp = q->front;
-    PCB* item = temp->data;
+    KeyPointer* item = temp->data;
     q->front = q->front->next;
     if (q->front == NULL) {
         q->rear = NULL;
     }
     free(temp);
-    printf("Deleted %d\n", item->processID);
+    printf("Deleted %s\n", item->value);
     return item;
 }
 
@@ -52,9 +53,47 @@ void display(Queue *q) {
     Node *temp = q->front;
     printf("Queue elements are: \n");
     while (temp) {
-        PCB* item=temp->data;
-        printf("%d ", item->processID);
+        KeyPointer* item=temp->data;
+        printf("%s ", item->value);
         temp = temp->next;
     }
     printf("\n");
 }
+
+KeyPointer* dequeueSpecificQueue(Queue* q, int processID) {
+    if (isEmpty(q)) {
+        printf("Queue is empty!\n");
+        return NULL;
+    }
+
+    Node* temp = q->front;
+    Node* prev = NULL;
+
+    while (temp != NULL && parseInt(temp->data->value) != processID) {
+        prev = temp;
+        temp = temp->next;
+    }
+
+    if (temp == NULL) {
+        printf("Process ID %d not found in the queue!\n", processID);
+        return NULL;
+    }
+
+    if (prev == NULL) {
+        q->front = temp->next;
+        if (q->front == NULL) {
+            q->rear = NULL;
+        }
+    } else {
+        prev->next = temp->next;
+        if (prev->next == NULL) {
+            q->rear = prev;
+        }
+    }
+
+    KeyPointer* item = temp->data;
+    free(temp);
+    printf("Deleted process ID %s\n", item->value);
+    return item;
+}
+

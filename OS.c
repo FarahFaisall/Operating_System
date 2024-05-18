@@ -4,15 +4,18 @@
 #include <stdbool.h>
 #include "PriorityQueue.h" // Include the header file
 #include "Queue.h"         // Include the header file
-#include "PCB.h"
+#include "KeyPointer.h"
+#include "Utility.h"
 
-// stores word for example: State: ”Ready”.
 typedef struct
 {
-    char name[100];
-    char value[100];
-} KeyPointer;
-
+    int processID;
+    char processState[10];
+    int currentPriority;
+    int PC;
+    int lowerBound;
+    int upperBound;
+} PCB;
 // Stores 60 key pointers
 typedef struct
 {
@@ -20,15 +23,14 @@ typedef struct
     int currentLoc;
     KeyPointer PCBs[18];
     int pcbPointer;
-
 } Memory;
 
 // Global Initialization
 Memory memory;
+Queue waitingQueue;
+PriorityQueue readyQueue;
 
-void PCBinit()
-{
-}
+
 
 char **mySplit(char *str)
 {
@@ -127,32 +129,37 @@ void execute(char line[])
     }
 }
 
-void allocateProcess(char process[], int id)
+void initializeKeyPointer(KeyPointer* kp, const char* name, const char* value) {
+    strncpy(kp->name, name, sizeof(kp->name) - 1);
+    kp->name[sizeof(kp->name) - 1] = '\0';
+    strncpy(kp->value, value, sizeof(kp->value) - 1);
+    kp->value[sizeof(kp->value) - 1] = '\0';
+}
+void initializeKeyPointerWithInt(KeyPointer* kp, const char* name, int value) {
+    char valueStr[100];
+    snprintf(valueStr, sizeof(valueStr), "%d", value);  // Convert integer to string
+    initializeKeyPointer(kp,name,valueStr);
+}
+
+KeyPointer* allocateProcess(char process[], int id)
 {
     PCB pcb = {id, "Ready", 1, 0, memory.currentLoc, 0};
-    KeyPointer pID = {"Process ID: ", pcb.processID};
-    KeyPointer PC = {"PC: ", pcb.PC};
-    KeyPointer priority = {"Current priotity: ", 1};
+    KeyPointer pID;
+    KeyPointer PC;
+    KeyPointer state={"State","Ready"};
+    KeyPointer priority;
+    KeyPointer lowerBound;
+    KeyPointer upperBound;
 
-    strncpy(pcb.processState, "Running", 9);
-    pcb.processState[9] = '\0'; // Ensure null-termination
-
-    KeyPointer state;
-
-    // Initialize the 'name' field
-    strncpy(state.name, "State: ", sizeof(state.name) - 1);
-    state.name[sizeof(state.name) - 1] = '\0'; // Ensure null-termination
-
-    // Initialize the 'value' field
-    strncpy(state.value, pcb.processState, sizeof(state.value) - 1);
-    state.value[sizeof(state.value) - 1] = '\0'; // Ensure null-termination
-
-    // KeyPointer priority = {"Current Priority: ", pcb.currentPriority};
-    KeyPointer lowerBound = {"Lower Bound: ", pcb.lowerBound};
+    initializeKeyPointerWithInt(&pID,"Process ID: ",pcb.processID);
+    initializeKeyPointerWithInt(&PC,"PC: ",pcb.PC);
+    initializeKeyPointerWithInt(&priority,"Current Priority: ",pcb.currentPriority);
+    initializeKeyPointerWithInt(&lowerBound,"Lower Bound",pcb.lowerBound);
     parseIntoLines(process);
     memory.currentLoc += 3;
-    KeyPointer upperBound = {"Upper Bound: ", pcb.upperBound = memory.currentLoc - 1};
+    initializeKeyPointerWithInt(&upperBound,"Upper Bound: ",memory.currentLoc-1);
 
+    KeyPointer * pIDkp= & memory.PCBs[memory.pcbPointer];
     // // allocating the PCB in the PCB's memory space
     memory.PCBs[memory.pcbPointer++] = pID;
     memory.PCBs[memory.pcbPointer++] = PC;
@@ -160,12 +167,17 @@ void allocateProcess(char process[], int id)
     memory.PCBs[memory.pcbPointer++] = priority;
     memory.PCBs[memory.pcbPointer++] = lowerBound;
     memory.PCBs[memory.pcbPointer++] = upperBound;
+
+    return pIDkp;
 }
+
 
 int main()
 {
     memory.currentLoc = 0;
     memory.pcbPointer = 0;
+    initializePriorityQueue(&readyQueue);
+    initializeQueue(&waitingQueue);
     char proccesses[][20] = {"Program_1.txt", "Program_2.txt", "Program_3.text"};
     int serviceTime[3];
     for (int i = 0; i < 3; i++)
@@ -175,25 +187,28 @@ int main()
     }
     int i = 0;
 
+
+    // implementing the scheduler
     do
     {
-        printf("Clock cycle %d --> %d", i, i + 1);
+        printf("Clock cycle %d --> %d\n", i, i + 1);
+        //check if any process arrived
         for (int j = 0; j < 3; j++)
         {
             if (i == serviceTime[j])
             {
-                allocateProcess(proccesses[j], j);
+                KeyPointer *PCBPointer= allocateProcess(proccesses[j], j+1);
+                enqueuePriority(&readyQueue,PCBPointer,parseInt((PCBPointer+2)->value));
             }
         }
-        i++;
-    } while (false);
 
-    for (int k = 0; k < 7; k++)
-    {
-        printf("Name= %s\n", memory.array[k].name);
-        printf("Value= %s\n", memory.array[k].value);
-        printf("\n");
+        i++;
+    } while (i<0);
+
+    for (int i=0;i<7;i++){
+        printf("Name : %s , Pointer %s\n",memory.PCBs[i].name,memory.PCBs[i].value);
     }
+
 
     return 0;
 }

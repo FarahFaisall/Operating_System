@@ -1,9 +1,10 @@
 #ifndef PRIORITY_QUEUE_H
 #define PRIORITY_QUEUE_H
-#include "PCB.h"
+
+#include "KeyPointer.h"
 
 typedef struct PriorityNode {
-    PCB* data;
+    KeyPointer* data;
     int priority;
     struct PriorityNode *next;
 } PriorityNode;
@@ -14,8 +15,9 @@ typedef struct {
 
 void initializePriorityQueue(PriorityQueue *pq);
 int isEmptyPriority(PriorityQueue *pq);
-void enqueuePriority(PriorityQueue *pq, PCB*  data, int priority);
-PCB* dequeuePriority(PriorityQueue *pq);
+void enqueuePriority(PriorityQueue *pq, KeyPointer*  data, int priority);
+KeyPointer* dequeuePriority(PriorityQueue *pq);
 void displayPriority(PriorityQueue *pq);
+KeyPointer* dequeueSpecific(PriorityQueue *pq, int processID);
 
 #endif

@@ -1,10 +1,10 @@
 #ifndef QUEUE_H
 #define QUEUE_H
 
-#include "PCB.h"
+#include "KeyPointer.h"
 
 typedef struct Node {
-    PCB* data;
+    KeyPointer* data;
     struct Node *next;
 } Node;
 
@@ -15,8 +15,9 @@ typedef struct {
 
 void initializeQueue(Queue *q);
 int isEmpty(Queue *q);
-void enqueue(Queue *q, PCB* data);
-PCB* dequeue(Queue *q);
+void enqueue(Queue *q, KeyPointer* data);
+KeyPointer* dequeue(Queue *q);
 void display(Queue *q);
+KeyPointer* dequeueSpecificQueue(Queue* q, int processID);
 
 #endif // QUEUE_H
