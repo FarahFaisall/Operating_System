@@ -2,58 +2,59 @@
 #include <stdlib.h>
 #include "PriorityQueue.h"
 
-void initializeQueue(PriorityQueue *pq) {
+
+void initializePriorityQueue(PriorityQueue *pq) {
     pq->front = NULL;
 }
 
-int isEmpty(PriorityQueue *pq) {
+int isEmptyPriority(PriorityQueue *pq) {
     return pq->front == NULL;
 }
 
-void enqueue(PriorityQueue *pq, int data, int priority) {
-    Node* newNode = (Node*)malloc(sizeof(Node));
+void enqueuePriority(PriorityQueue *pq, PCB* data, int priority) {
+    PriorityNode *newNode = (PriorityNode *)malloc(sizeof(PriorityNode));
     newNode->data = data;
     newNode->priority = priority;
     newNode->next = NULL;
 
-    if (isEmpty(pq) || pq->front->priority > priority) {
+    if (isEmptyPriority(pq) || pq->front->priority > priority) {
         newNode->next = pq->front;
         pq->front = newNode;
     } else {
-        Node* temp = pq->front;
+        PriorityNode *temp = pq->front;
         while (temp->next != NULL && temp->next->priority <= priority) {
             temp = temp->next;
         }
         newNode->next = temp->next;
         temp->next = newNode;
     }
-    printf("Inserted %d with priority %d\n", data, priority);
+    printf("Inserted %d with priority %d\n", data->processID, priority);
 }
 
-int dequeue(PriorityQueue *pq) {
-    if (isEmpty(pq)) {
+PCB * dequeuePriority(PriorityQueue *pq) {
+    if (isEmptyPriority(pq)) {
         printf("Priority Queue is empty!\n");
-        return -1;
+        return NULL;
     } else {
-        Node* temp = pq->front;
-        int item = temp->data;
+        PriorityNode *temp = pq->front;
+        PCB * item = temp->data;
         pq->front = pq->front->next;
         free(temp);
-        printf("Deleted %d\n", item);
+        printf("Deleted %d\n", item->processID);
         return item;
     }
 }
 
-void display(PriorityQueue *pq) {
-    Node* temp = pq->front;
-    if (isEmpty(pq)) {
+void displayPriority(PriorityQueue *pq) {
+    PriorityNode *temp = pq->front;
+    if (isEmptyPriority(pq)) {
         printf("Priority Queue is empty!\n");
     } else {
-        printf("Priority Queue elements are: \n");
+        printf("Priority Queue elements are:\n");
         while (temp) {
-            printf("Data: %d, Priority: %d\n", temp->data, temp->priority);
+            PCB * item=temp->data;
+            printf("Data: %d, Priority: %d\n",item->processID , temp->priority);
             temp = temp->next;
         }
     }
 }
-

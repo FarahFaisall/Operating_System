@@ -2,92 +2,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
-
-// we are implementing priority queue structure
-typedef struct Node
-{
-    int data;
-    int priority;
-    struct Node *next;
-} Node;
-
-typedef struct
-{
-    Node *front;
-} PriorityQueue;
-
-void initializeQueue(PriorityQueue *pq)
-{
-    pq->front = NULL;
-}
-
-int isEmpty(PriorityQueue *pq)
-{
-    return pq->front == NULL;
-}
-
-void enqueue(PriorityQueue *pq, int data, int priority)
-{
-    Node *newNode = (Node *)malloc(sizeof(Node));
-    newNode->data = data;
-    newNode->priority = priority;
-    newNode->next = NULL;
-
-    if (isEmpty(pq) || pq->front->priority > priority)
-    {
-        newNode->next = pq->front;
-        pq->front = newNode;
-    }
-    else
-    {
-        Node *temp = pq->front;
-        while (temp->next != NULL && temp->next->priority <= priority)
-        {
-            temp = temp->next;
-        }
-        newNode->next = temp->next;
-        temp->next = newNode;
-    }
-    printf("Inserted %d with priority %d\n", data, priority);
-}
-
-int dequeue(PriorityQueue *pq)
-{
-    if (isEmpty(pq))
-    {
-        printf("Priority Queue is empty!\n");
-        return -1;
-    }
-    else
-    {
-        Node *temp = pq->front;
-        int item = temp->data;
-        pq->front = pq->front->next;
-        free(temp);
-        printf("Deleted %d\n", item);
-        return item;
-    }
-}
-
-void display(PriorityQueue *pq)
-{
-    Node *temp = pq->front;
-    if (isEmpty(pq))
-    {
-        printf("Priority Queue is empty!\n");
-    }
-    else
-    {
-        printf("Priority Queue elements are: \n");
-        while (temp)
-        {
-            printf("Data: %d, Priority: %d\n", temp->data, temp->priority);
-            temp = temp->next;
-        }
-    }
-}
-//----------------------------------------------------------------------
-// BEGGINING OF PROJECT
+#include "PriorityQueue.h" // Include the header file
+#include "Queue.h"         // Include the header file
+#include "PCB.h"
 
 // stores word for example: State: ”Ready”.
 typedef struct
@@ -96,22 +13,13 @@ typedef struct
     char value[100];
 } KeyPointer;
 
-// PCB stores info about a process
-typedef struct
-{
-    int processID;
-    char processState[10];
-    int currentPriority;
-    int PC;
-    int lowerBound;
-    int upperBound;
-} PCB;
-
 // Stores 60 key pointers
 typedef struct
 {
-    KeyPointer array[60];
+    KeyPointer array[42];
     int currentLoc;
+    KeyPointer PCBs[18];
+    int pcbPointer;
 
 } Memory;
 
@@ -120,7 +28,6 @@ Memory memory;
 
 void PCBinit()
 {
-    
 }
 
 char **mySplit(char *str)
@@ -167,12 +74,24 @@ void parseIntoLines(char program[])
     char instruction[100];
 
     input = fopen(program, "r");
+    if (input == NULL)
+    {
+        printf("Error opening file.\n");
+        return;
+    }
     int c = 0;
     while (fgets(instruction, 100, input))
     {
         KeyPointer kp;
         snprintf(kp.name, sizeof(kp.name), "instruction %d", c++);
-        snprintf(kp.value, sizeof(kp.value), "%s", instruction);
+
+        // Remove the newline character if present
+        instruction[strcspn(instruction, "\n")] = '\0';
+
+        // Copy the instruction to the value field
+        strncpy(kp.value, instruction, sizeof(kp.value) - 1);
+        kp.value[sizeof(kp.value) - 1] = '\0'; // Ensure null termination
+
         memory.array[memory.currentLoc++] = kp;
     }
     fclose(input);
@@ -208,29 +127,73 @@ void execute(char line[])
     }
 }
 
+void allocateProcess(char process[], int id)
+{
+    PCB pcb = {id, "Ready", 1, 0, memory.currentLoc, 0};
+    KeyPointer pID = {"Process ID: ", pcb.processID};
+    KeyPointer PC = {"PC: ", pcb.PC};
+    KeyPointer priority = {"Current priotity: ", 1};
+
+    strncpy(pcb.processState, "Running", 9);
+    pcb.processState[9] = '\0'; // Ensure null-termination
+
+    KeyPointer state;
+
+    // Initialize the 'name' field
+    strncpy(state.name, "State: ", sizeof(state.name) - 1);
+    state.name[sizeof(state.name) - 1] = '\0'; // Ensure null-termination
+
+    // Initialize the 'value' field
+    strncpy(state.value, pcb.processState, sizeof(state.value) - 1);
+    state.value[sizeof(state.value) - 1] = '\0'; // Ensure null-termination
+
+    // KeyPointer priority = {"Current Priority: ", pcb.currentPriority};
+    KeyPointer lowerBound = {"Lower Bound: ", pcb.lowerBound};
+    parseIntoLines(process);
+    memory.currentLoc += 3;
+    KeyPointer upperBound = {"Upper Bound: ", pcb.upperBound = memory.currentLoc - 1};
+
+    // // allocating the PCB in the PCB's memory space
+    memory.PCBs[memory.pcbPointer++] = pID;
+    memory.PCBs[memory.pcbPointer++] = PC;
+    memory.PCBs[memory.pcbPointer++] = state;
+    memory.PCBs[memory.pcbPointer++] = priority;
+    memory.PCBs[memory.pcbPointer++] = lowerBound;
+    memory.PCBs[memory.pcbPointer++] = upperBound;
+}
+
 int main()
 {
     memory.currentLoc = 0;
+    memory.pcbPointer = 0;
     char proccesses[][20] = {"Program_1.txt", "Program_2.txt", "Program_3.text"};
-    int serviceTime[] = {6, 2, 0};
+    int serviceTime[3];
+    for (int i = 0; i < 3; i++)
+    {
+        printf("Please input the service time of program %d:\n", i + 1);
+        scanf("%d", &serviceTime[i]);
+    }
     int i = 0;
-    while (true){
-        for (int j=0; j<3;j++){
-            if (i==serviceTime[j])
+
+    do
+    {
+        printf("Clock cycle %d --> %d", i, i + 1);
+        for (int j = 0; j < 3; j++)
+        {
+            if (i == serviceTime[j])
             {
-                PCB pcb;
-                KeyPointer PC={"PC: ",pcb.PC=0};
-                // pcb.currentPriority=1;
-                // pcb.lowerBound=memory.currentLoc;
-                // pcb.processState="Ready";
-                // memory.array[memory.currentLoc++]=pcb;
-                // proccesses[j];
+                allocateProcess(proccesses[j], j);
             }
         }
-    }
+        i++;
+    } while (false);
 
-    PriorityQueue pq;
-    initializeQueue(&pq);
+    for (int k = 0; k < 7; k++)
+    {
+        printf("Name= %s\n", memory.array[k].name);
+        printf("Value= %s\n", memory.array[k].value);
+        printf("\n");
+    }
 
     return 0;
 }
