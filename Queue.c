@@ -60,7 +60,7 @@ void display(Queue *q) {
     printf("\n");
 }
 
-KeyPointer* dequeueSpecificQueue(Queue* q, int processID) {
+KeyPointer* dequeueSpecific(Queue* q, int processID) {
     if (isEmpty(q)) {
         printf("Queue is empty!\n");
         return NULL;

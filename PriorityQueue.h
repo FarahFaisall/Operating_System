@@ -18,6 +18,5 @@ int isEmptyPriority(PriorityQueue *pq);
 void enqueuePriority(PriorityQueue *pq, KeyPointer*  data, int priority);
 KeyPointer* dequeuePriority(PriorityQueue *pq);
 void displayPriority(PriorityQueue *pq);
-KeyPointer* dequeueSpecific(PriorityQueue *pq, int processID);
 
 #endif

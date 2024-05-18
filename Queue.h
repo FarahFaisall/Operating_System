@@ -18,6 +18,6 @@ int isEmpty(Queue *q);
 void enqueue(Queue *q, KeyPointer* data);
 KeyPointer* dequeue(Queue *q);
 void display(Queue *q);
-KeyPointer* dequeueSpecificQueue(Queue* q, int processID);
+KeyPointer* dequeueSpecific(Queue* q, int processID);
 
 #endif // QUEUE_H

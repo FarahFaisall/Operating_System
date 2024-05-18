@@ -6,7 +6,10 @@
         "pcb.h": "c",
         "stdio.h": "c",
         "string.h": "c",
-        "utility.h": "c"
+        "utility.h": "c",
+        "__locale": "c",
+        "cctype": "c",
+        "locale": "c"
     },
     "C_Cpp.errorSquiggles": "enabled"
 }
