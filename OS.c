@@ -2,11 +2,18 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
-#include <math.h>
 #include "PriorityQueue.h" // Include the header file
 #include "Queue.h"         // Include the header file
 #include "KeyPointer.h"
 #include "Utility.h"
+#define RED   "\x1B[31m"
+#define GRN   "\x1B[32m"
+#define YEL   "\x1B[33m"
+#define BLU   "\x1B[34m"
+#define MAG   "\x1B[35m"
+#define CYN   "\x1B[36m"
+#define WHT   "\x1B[37m"
+#define RESET "\x1B[0m"
 
 typedef struct
 {
@@ -26,13 +33,14 @@ typedef struct
     int pcbPointer;
 } Memory;
 
-// Defining a Mutex
+// Defining renameFile.txt Mutex
 typedef struct
 {
     int value; // 1 available, 0 locked.(shows whether the resource protected by the mutex is currently in use.)
     PriorityQueue queue;
     int ownerID; // pid that has the resource
-    int lock;    // simulate the lock with a simple flag
+    int lock;    // simulate the lock with renameFile.txt simple flag
+    char* name ;
 } Mutex;
 
 // Global Initialization
@@ -62,10 +70,10 @@ char **mySplit(char *str)
     }
 
     // Puts the str values into the split array and concatenates until
-    // a delimiter is found, then it moves to the next array index.
+    // renameFile.txt delimiter is found, then it moves to the next array index.
     for (int i = 0; i < strlen(str); i++)
     {
-        if (str[i] != ' ')
+        if (str[i] != ' ' && str[i] != '\r')
         {
             char temp[2];
             temp[0] = str[i];
@@ -87,7 +95,7 @@ char **mySplit(char *str)
 void parseIntoLines(char program[])
 {
     FILE *input;
-    // Open a file in read mode
+    // Open renameFile.txt file in read mode
     char instruction[100];
 
     input = fopen(program, "r");
@@ -121,7 +129,7 @@ void initializeMutex(Mutex *m)
     m->lock = 1; // lock is initially released (1 is released, 0 unreleased)
 }
 
-bool semWaitB(Mutex *m, KeyPointer *p)
+bool semWaitB(Mutex *m, KeyPointer *p,int quantum)
 {
     bool flag;
     m->lock = 0;
@@ -129,13 +137,19 @@ bool semWaitB(Mutex *m, KeyPointer *p)
     {
         m->ownerID = parseInt(p->value);
         m->value = 0;
-        printf("Process %s acquired resource\n", p->value);
+        printf("Process %s acquired resource %s\n", p->value,m->name);
         flag = 0; // MAFEESH MOSHEKLA
     }
     else
     {
-        enqueuePriority(&m->queue, p, parseInt((p + 2)->value));
-        printf("Process %s is blocked waiting for resource\n", p->value);
+        printf("Process %s is blocked waiting for resource %s\n", p->value,m->name);
+        char* pcbState= (p + 2)->value;
+        sprintf(pcbState,"%s","Blocked");
+        int priority = parseInt((p + 3)->value);
+        if (quantum==0) {
+            sprintf((p+3)->value,"%d",++priority);
+        }
+        enqueuePriority(&m->queue, p, priority);
         flag = 1; // FEEH MOSHKELA AKA Blocked
     }
     m->lock = 1;
@@ -144,21 +158,23 @@ bool semWaitB(Mutex *m, KeyPointer *p)
 
 KeyPointer *semSignalB(Mutex *m, KeyPointer *p)
 {
-    // ensures that only one thread at a time can execute the critical section;  no other thread can change these variables concurrently
+    // ensures that only one thread at renameFile.txt time can execute the critical section;  no other thread can change these variables concurrently
     m->lock = 0;
     if (m->ownerID == parseInt(p->value))
     {
+        printf("Process %s released resource %s\n", p->value,m->name);
         if (isEmptyPriority(&m->queue))
         {
             m->value = 1;
             m->ownerID = -1;
-            printf("Process %s released resource\n", p->value);
         }
         else
         {
             KeyPointer *nextProcess = dequeuePriority(&m->queue);
-            m->ownerID = *(nextProcess->value);
-            printf("Process %d is unblocked and now owns resource\n", m->ownerID);
+            char* pcbState= (nextProcess + 2)->value;
+            sprintf(pcbState,"%s","Ready");
+            m->ownerID = parseInt(nextProcess->value);
+            printf("Process %d is unblocked and now owns resource %s\n", m->ownerID,m->name);
             m->lock = 1;
             return nextProcess;
         }
@@ -182,31 +198,33 @@ void initializeKeyPointerWithInt(KeyPointer *kp, char *name, int value)
     initializeKeyPointer(kp, name, valueStr);
 }
 
-bool execute(KeyPointer *PCB)
+bool execute(KeyPointer *PCB,int quantum)
 {
-    int intPC=parseInt((PCB + 3)->value);
+    int intPC=parseInt((PCB + 1)->value);
     int lowerBound = parseInt((PCB + 4)->value);
     char **lineSplitted = mySplit(memory.array[lowerBound + ((intPC)++)].value);
-    sprintf(((PCB + 3)->value),"%d",intPC);
+    sprintf(((PCB + 1)->value),"%d",intPC);
+    char* tempp = (PCB + 1)->value;
     // what to do with first line
     if (strcmp(lineSplitted[0], "semWait") == 0)
     {
         bool isBlocked;
         if (strcmp(lineSplitted[1], "userInput") == 0)
         {
-            isBlocked = semWaitB(&inputMutex, PCB);
+            isBlocked = semWaitB(&inputMutex, PCB,quantum-1);
         }
         else if (strcmp(lineSplitted[1], "userOutput") == 0)
         {
-            isBlocked = semWaitB(&outputMutex, PCB);
+            isBlocked = semWaitB(&outputMutex, PCB,quantum-1);
         }
         else
         {
-            isBlocked = semWaitB(&fileMutex, PCB);
+            isBlocked = semWaitB(&fileMutex, PCB,quantum-1);
         }
         if (isBlocked)
         {
             enqueue(&blockedQueue, PCB);
+            printf(" in blocked queue\n");
             return 1; // Current Processs is blocked
         }
     }
@@ -218,7 +236,10 @@ bool execute(KeyPointer *PCB)
             if (unblocked != NULL)
             {
                 dequeueSpecific(&blockedQueue, parseInt(unblocked->value));
+                printf("from blocked queue\n");
                 enqueue(&readyQueue, unblocked);
+                printf(" to ready queue\n");
+
             }
         }
         else if (strcmp(lineSplitted[1], "userOutput") == 0)
@@ -227,7 +248,9 @@ bool execute(KeyPointer *PCB)
             if (unblocked != NULL)
             {
                 dequeueSpecific(&blockedQueue, parseInt(unblocked->value));
+                printf("from blocked queue\n");
                 enqueue(&readyQueue, unblocked);
+                printf(" to ready queue\n");
             }
         }
         else
@@ -236,7 +259,9 @@ bool execute(KeyPointer *PCB)
             if (unblocked != NULL)
             {
                 dequeueSpecific(&blockedQueue, parseInt(unblocked->value));
+                printf("from blocked queue\n");
                 enqueue(&readyQueue, unblocked);
+                printf(" to ready queue\n");
             }
         }
     }
@@ -269,25 +294,40 @@ bool execute(KeyPointer *PCB)
         {
             // handle mutex
             char input[100];
-            scanf("Please enter a value %s", input);
+            printf("Please enter input value for %s: \n", lineSplitted[1]);
+            scanf("%s", input);
             initializeKeyPointer(&variable, lineSplitted[1], input);
         }
-        //"assign x y" case when y is a value
+            //"assign x y" case when y is renameFile.txt value
         else if (strcmp(lineSplitted[2], "readFile") == 0)
         {
             FILE *file;
             char *buffer;
             long file_length;
-            file = fopen(lineSplitted[1], "r");
+
+            //i want to search for file name inside the variable
+            int upperBound = parseInt((PCB + 5)->value);
+            char* x ;
+            for (int i = upperBound - 2; i <= upperBound; i++)
+            {
+                if (strcmp(memory.array[i].name, lineSplitted[3]) == 0)
+                {
+                   x= memory.array[i].value;
+                    break;
+                }
+            }
+
+            file = fopen(x, "r");
             if (file == NULL)
             {
                 fprintf(stderr, "Error opening file.\n");
-                return 1;
+                initializeKeyPointer(&variable, lineSplitted[1], "10");
+                return 0;
             }
             // The third argument SEEK_END indicates that we want to move the file position indicator to the end of the file.
             // After this call, the file position indicator is at the end of the file.
             fseek(file, 0, SEEK_END);
-            // ftell is a function that returns the current file position indicator for the given file stream.
+            // ftell is renameFile.txt function that returns the current file position indicator for the given file stream.
             file_length = ftell(file);
             // fseek is called again to reset the file position indicator to the beginning of the file.
             fseek(file, 0, SEEK_SET);
@@ -298,7 +338,6 @@ bool execute(KeyPointer *PCB)
             {
                 perror("Memory allocation error");
                 fclose(file);
-                return 1;
             }
             // second argument is the size of each element to be read, which is 1 byte in this case.
             fread(buffer, 1, file_length, file);
@@ -334,7 +373,7 @@ bool execute(KeyPointer *PCB)
         if (file == NULL)
         {
             fprintf(stderr, "Error opening file.\n");
-            return 1;
+            return 0;
         }
 
 
@@ -352,6 +391,7 @@ bool execute(KeyPointer *PCB)
         if (file == NULL)
         {
             printf("Error oppening file");
+            return 0;
         }
     }
     else if (strcmp(lineSplitted[0], "printFromTo") == 0)
@@ -366,10 +406,9 @@ bool execute(KeyPointer *PCB)
         int upperBound = parseInt((PCB + 5)->value);
         for (int i = upperBound - 2; i <= upperBound; i++)
         {
-
             if (strcmp(memory.array[i].name, lineSplitted[1]) == 0)
             {
-                x = parseInt(lineSplitted[1]);
+                x = parseInt(memory.array[i].value);
                 varFound1 = true;
                 break;
             }
@@ -378,7 +417,7 @@ bool execute(KeyPointer *PCB)
         {
             if (strcmp(memory.array[i].name, lineSplitted[2]) == 0)
             {
-                y = parseInt(lineSplitted[1]);
+                y = parseInt(memory.array[i].value);
                 varFound2 = true;
                 break;
             }
@@ -392,14 +431,14 @@ bool execute(KeyPointer *PCB)
         {
             for (int i = x; i <= y; i++)
             {
-                printf("%d", i);
+                printf("   %d\n", i);
             }
         }
         else
         {
             for (int i = x; i >= y; i--)
             {
-                printf("%d", i);
+                printf("    %d\n", i);
             }
         }
     }
@@ -461,11 +500,18 @@ void initializeMemory(Memory *memory)
 
 int getRemainingExecTime(KeyPointer *kp)
 {
-    return ((kp + 5)->value) - 3 - ((kp + 3)->value);
+    int lowerBound = parseInt(((kp + 4)->value));
+    int upperBound = parseInt(((kp + 5)->value));
+    int pc = parseInt(((kp + 1)->value));
+    int exec = upperBound - lowerBound - pc - 3;
+    return exec;
 }
 
 int main()
 {
+    fileMutex.name = "fileMutex";
+    inputMutex.name = "inputMutex";
+    outputMutex.name = "outputMutex";
     initializeMemory(&memory);
     initializeQueue(&readyQueue);
     initializeQueue(&blockedQueue);
@@ -477,7 +523,7 @@ int main()
     initializeQueue(&queue3);
     initializeQueue(&queue4);
 
-    char proccesses[][20] = {"Program_1.txt", "Program_2.txt", "Program_3.text"};
+    char proccesses[][20] = {"Program_1.txt", "Program_2.txt", "Program_3.txt"};
     // sample input in arrivalTime is {3,2,10}
     int arrivalTime[3];
     for (int i = 0; i < 3; i++)
@@ -493,7 +539,9 @@ int main()
 
     int i = 0;
     int quantum = 0;
-    KeyPointer *currPCB;
+    KeyPointer *currPCB = NULL;
+    int programCount=3;
+
     // implementing the scheduler
     do
     {
@@ -506,88 +554,128 @@ int main()
             if (i == arrivalTime[j])
             {
                 KeyPointer *PCBPointer = allocateProcess(proccesses[j], j + 1);
-                // enqueuePriority(&readyQueue, PCBPointer, parseInt((PCBPointer + 2)->value));
+                printf("Process %d arrived\n", j + 1);
                 enqueue(&readyQueue, PCBPointer);
+                printf(" in ready queue\n");
             }
         }
         while (!isEmpty(&readyQueue))
         {
             KeyPointer *tempPCB = dequeue(&readyQueue);
-            if (parseInt((currPCB + 2)->value) == 1)
+            printf(" from ready queue to insert it in multilevel feedback queue: ");
+            if (parseInt((tempPCB + 3)->value) == 1)
             {
                 enqueue(&queue1, tempPCB);
+                printf(" in queue 1\n");
             }
-            else if (parseInt((currPCB + 2)->value) == 2)
+            else if (parseInt((tempPCB + 3)->value) == 2)
             {
                 enqueue(&queue2, tempPCB);
+                printf(" in queue 2\n");
             }
-            else if (parseInt((currPCB + 2)->value) == 3)
+            else if (parseInt((tempPCB + 3)->value) == 3)
             {
                 enqueue(&queue3, tempPCB);
+                printf("in queue 3\n");
             }
             else
             {
                 enqueue(&queue4, tempPCB);
+                printf("in queue 4\n");
             }
         }
+
+        if(currPCB != NULL && getRemainingExecTime(currPCB)<0)
+        {
+            quantum=0;
+            char* pcbState= (currPCB + 2)->value;
+            sprintf(pcbState,"%s","Terminated");
+            currPCB=NULL;
+            programCount--;
+        }
+
         // seeing which process will execute
         if (quantum == 0)
         {
+
             // INCREASE PRIORITY TO GO DOWN THE QUEUE LIST
-            if (currPCB != NULL && getRemainingExecTime(currPCB) != 0)
+            // if (currPCB != NULL && processExecuting)
+            if (currPCB != NULL)
             {
-                char  *priority = (currPCB + 2)->value;
+                char *priority = (currPCB + 3)->value;
                 int x = parseInt(priority);
-                if (x < 4){
+                if (x < 4)
+                {
                     x++;
-                    sprintf(priority,"%d",x);
+                    sprintf(priority, "%d", x);
                 }
-                if (parseInt((currPCB + 2)->value) == 2)
+                if (parseInt(priority) == 2)
                 {
                     enqueue(&queue2, currPCB);
+                    printf(" in queue 2\n");
                 }
-                else if ( parseInt((currPCB + 2)->value) == 3)
+                else if (parseInt(priority) == 3)
                 {
                     enqueue(&queue3, currPCB);
+                    printf(" in queue 3\n");
                 }
                 else
                 {
                     enqueue(&queue4, currPCB);
+                    printf(" in queue 4\n");
                 }
             }
             if (!isEmpty(&queue1))
             {
                 currPCB = dequeue(&queue1);
+                printf(" from queue 1 to execute\n");
+                quantum = 1;
+                //processExecuting = true;
             }
             else if (!isEmpty(&queue2))
             {
                 currPCB = dequeue(&queue2);
+                printf(" from queue 2 to execute\n");
+                quantum = 2;
+                //processExecuting = true;
             }
             else if (!isEmpty(&queue3))
             {
                 currPCB = dequeue(&queue3);
+                printf(" from queue 3 to execute\n");
+                quantum = 4;
+                //processExecuting = true;
             }
             else if (!isEmpty(&queue4))
             {
                 currPCB = dequeue(&queue4);
+                printf(" from queue 4 to execute\n");
+                quantum=8;
+                //processExecuting = true;
             }
-            int priority = parseInt((currPCB + 2)->value);
-            quantum = (int)pow(2, priority - 1);
         }
-        bool processed = execute(currPCB);
-        quantum--;
+        bool processed;
+        if(currPCB!=NULL) {
+            printf(CYN"Execution Phase: \n"RESET);
+            processed = execute(currPCB, quantum);
+            quantum--;
+            if (quantum == 0)
+            {
+                printf(GRN"Quantum finished\n"RESET);
+            }
+        }
         if (processed)
         {
             currPCB = NULL;
             quantum = 0;
         }
         i++;
-    } while (!isEmpty(&queue1) || !isEmpty(&queue2) || !isEmpty(&queue3) || !isEmpty(&queue4));
-
-    for (int i = 0; i < 6; i++)
+    } while (!isEmpty(&queue1) || !isEmpty(&queue2) || !isEmpty(&queue3) || !isEmpty(&queue4) || !isEmpty(&readyQueue) || !isEmpty(&blockedQueue) || currPCB!=NULL || programCount>0);
+    for (int i = 0; i < 60; i++)
     {
         printf("Name : %s , Value: %s\n", memory.PCBs[i].name, memory.PCBs[i].value);
     }
-
     return 0;
 }
+
+
