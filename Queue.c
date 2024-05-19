@@ -26,7 +26,7 @@ void enqueue(Queue *q, KeyPointer* data) {
         q->rear->next = newNode;
         q->rear = newNode;
     }
-    printf("Inserted %s\n", data->value);
+    printf("Inserted process with pID: %s", data->value);
 }
 
 KeyPointer* dequeue(Queue *q) {
@@ -41,7 +41,7 @@ KeyPointer* dequeue(Queue *q) {
         q->rear = NULL;
     }
     free(temp);
-    printf("Deleted %s\n", item->value);
+    printf("Removed process with pID: %s", item->value);
     return item;
 }
 
@@ -93,7 +93,7 @@ KeyPointer* dequeueSpecific(Queue* q, int processID) {
 
     KeyPointer* item = temp->data;
     free(temp);
-    printf("Deleted process ID %s\n", item->value);
+    printf("process with pID: %s successfully removed", item->value);
     return item;
 }
 

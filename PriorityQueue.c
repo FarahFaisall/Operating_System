@@ -29,7 +29,7 @@ void enqueuePriority(PriorityQueue *pq, KeyPointer* data, int priority) {
         newNode->next = temp->next;
         temp->next = newNode;
     }
-    printf("Inserted %s with priority %d\n", data->value, priority);
+    printf("Inserted %s with priority %d to the mutex blocked queue\n", data->value, priority);
 }
 
 KeyPointer * dequeuePriority(PriorityQueue *pq) {
@@ -41,7 +41,7 @@ KeyPointer * dequeuePriority(PriorityQueue *pq) {
         KeyPointer * item = temp->data;
         pq->front = pq->front->next;
         free(temp);
-        printf("Deleted %s\n", item->value);
+        printf("Removed process with pID: %s from mutex blocked queue\n", item->value);
         return item;
     }
 }
