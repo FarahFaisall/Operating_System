@@ -324,6 +324,7 @@ bool execute(KeyPointer *PCB,int quantum)
                 initializeKeyPointer(&variable, lineSplitted[1], "10");
                 return 0;
             }
+            printf("Read %s from file: %s",file,x);
             // The third argument SEEK_END indicates that we want to move the file position indicator to the end of the file.
             // After this call, the file position indicator is at the end of the file.
             fseek(file, 0, SEEK_END);
@@ -367,18 +368,35 @@ bool execute(KeyPointer *PCB,int quantum)
     }
     else if (strcmp(lineSplitted[0], "writeFile") == 0)
     {
+
+        //i want to search for file name inside the variable
+        int upperBound = parseInt((PCB + 5)->value);
+        char* fileName = NULL;
+        char* data= NULL;
+        for (int i = upperBound - 2; i <= upperBound; i++)
+        {
+            if (strcmp(memory.array[i].name, lineSplitted[1]) == 0)
+                fileName= memory.array[i].value;
+            if (strcmp(memory.array[i].name, lineSplitted[2]) == 0)
+                data= memory.array[i].value;
+        }
+        if (fileName == NULL)
+        {
+            printf("File name not found in memory.\n");
+            return 0;
+        }
         FILE *file;
         // Open the file for writing
-        file = fopen(lineSplitted[1], "w");
+        file = fopen(fileName, "w");
         if (file == NULL)
         {
             fprintf(stderr, "Error opening file.\n");
             return 0;
         }
-
+        printf("Writing into file: %s data: %s\n",fileName,data);
 
         // Write content to the file
-        fprintf(file,"%s", lineSplitted[2]);
+        fprintf(file,"%s", data);
 
         // Close the file
         fclose(file);
