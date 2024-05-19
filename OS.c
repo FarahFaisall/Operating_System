@@ -187,16 +187,16 @@ bool execute(KeyPointer *PCB)
     int intPC=parseInt((PCB + 3)->value);
     int lowerBound = parseInt((PCB + 4)->value);
     char **lineSplitted = mySplit(memory.array[lowerBound + ((intPC)++)].value);
-    sprintf(&((PCB + 3)->value),"%d",intPC);
+    sprintf(((PCB + 3)->value),"%d",intPC);
     // what to do with first line
     if (strcmp(lineSplitted[0], "semWait") == 0)
     {
         bool isBlocked;
-        if (strcmp(lineSplitted[1], "userInput"))
+        if (strcmp(lineSplitted[1], "userInput") == 0)
         {
             isBlocked = semWaitB(&inputMutex, PCB);
         }
-        else if (strcmp(lineSplitted[1], "userOutput"))
+        else if (strcmp(lineSplitted[1], "userOutput") == 0)
         {
             isBlocked = semWaitB(&outputMutex, PCB);
         }
@@ -212,7 +212,7 @@ bool execute(KeyPointer *PCB)
     }
     else if (strcmp(lineSplitted[0], "semSignal") == 0)
     {
-        if (strcmp(lineSplitted[1], "userInput"))
+        if (strcmp(lineSplitted[1], "userInput") == 0)
         {
             KeyPointer *unblocked = semSignalB(&inputMutex, PCB);
             if (unblocked != NULL)
@@ -221,7 +221,7 @@ bool execute(KeyPointer *PCB)
                 enqueue(&readyQueue, unblocked);
             }
         }
-        else if (strcmp(lineSplitted[1], "userOutput"))
+        else if (strcmp(lineSplitted[1], "userOutput") == 0)
         {
             KeyPointer *unblocked = semSignalB(&outputMutex, PCB);
             if (unblocked != NULL)
@@ -235,7 +235,7 @@ bool execute(KeyPointer *PCB)
             KeyPointer *unblocked = semSignalB(&fileMutex, PCB);
             if (unblocked != NULL)
             {
-                dequeueSpecific(&blockedQueue, unblocked);
+                dequeueSpecific(&blockedQueue, parseInt(unblocked->value));
                 enqueue(&readyQueue, unblocked);
             }
         }
@@ -244,7 +244,7 @@ bool execute(KeyPointer *PCB)
 
     {
         bool found = false;
-        int upperBound = (PCB + 5)->value;
+        int upperBound = parseInt((PCB + 5)->value);
         for (int i = upperBound - 2; i <= upperBound; i++)
         {
             if (strcmp(memory.array[i].name, lineSplitted[1]) == 0)
@@ -269,7 +269,7 @@ bool execute(KeyPointer *PCB)
         {
             // handle mutex
             char input[100];
-            scanf("Please enter a value %s", &input);
+            scanf("Please enter a value %s", input);
             initializeKeyPointer(&variable, lineSplitted[1], input);
         }
         //"assign x y" case when y is a value
@@ -312,11 +312,11 @@ bool execute(KeyPointer *PCB)
         {
             initializeKeyPointer(&variable, lineSplitted[1], lineSplitted[2]);
         }
-        int upperBound = (PCB + 5)->value;
+        int upperBound =parseInt((PCB + 5)->value);
         bool full = true;
         for (int i = upperBound - 2; i <= upperBound; i++)
         {
-            if (memory.array[i].name == '\0')
+            if (memory.array[i].name[0] =='\0')
             {
                 memory.array[i] = variable;
                 full = false;
@@ -324,7 +324,7 @@ bool execute(KeyPointer *PCB)
             }
         }
         if (full)
-            printf("The memory space of process %d is full, there's no place to assign new variables\n", PCB->value);
+            printf("The memory space of process %s is full, there's no place to assign new variables\n", PCB->value);
     }
     else if (strcmp(lineSplitted[0], "writeFile") == 0)
     {
@@ -337,8 +337,9 @@ bool execute(KeyPointer *PCB)
             return 1;
         }
 
+
         // Write content to the file
-        fprintf(file, lineSplitted[2]);
+        fprintf(file,"%s", lineSplitted[2]);
 
         // Close the file
         fclose(file);
@@ -362,7 +363,7 @@ bool execute(KeyPointer *PCB)
         int y;
         bool varFound1 = false;
         bool varFound2 = false;
-        int upperBound = (PCB + 5)->value;
+        int upperBound = parseInt((PCB + 5)->value);
         for (int i = upperBound - 2; i <= upperBound; i++)
         {
 
@@ -466,7 +467,7 @@ int getRemainingExecTime(KeyPointer *kp)
 int main()
 {
     initializeMemory(&memory);
-    initializeMemory(&readyQueue);
+    initializeQueue(&readyQueue);
     initializeQueue(&blockedQueue);
     initializeMutex(&fileMutex);
     initializeMutex(&inputMutex);
@@ -535,11 +536,11 @@ int main()
             // INCREASE PRIORITY TO GO DOWN THE QUEUE LIST
             if (currPCB != NULL && getRemainingExecTime(currPCB) != 0)
             {
-                char  *priority = &((currPCB + 2)->value);
-                int x = parseInt(*priority);
+                char  *priority = (currPCB + 2)->value;
+                int x = parseInt(priority);
                 if (x < 4){
                     x++;
-                    sprintf(*(priority),"%d",x);
+                    sprintf(priority,"%d",x);
                 }
                 if (parseInt((currPCB + 2)->value) == 2)
                 {

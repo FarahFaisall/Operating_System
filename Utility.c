@@ -5,11 +5,10 @@
 
 int parseInt(char test[])
 {
-    if(isdigit(test[0])){
+    //if(isdigit(test[0])){
         int intRes;
         intRes = atol(test);
         return intRes;
-    }
-    else{
-    }
+
+
 }
