@@ -168,11 +168,26 @@ KeyPointer *semSignalB(Mutex *m, KeyPointer *p)
     return NULL;
 }
 
+void initializeKeyPointer(KeyPointer *kp, char *name, char *value)
+{
+    strncpy(kp->name, name, sizeof(kp->name) - 1);
+    kp->name[sizeof(kp->name) - 1] = '\0';
+    strncpy(kp->value, value, sizeof(kp->value) - 1);
+    kp->value[sizeof(kp->value) - 1] = '\0';
+}
+void initializeKeyPointerWithInt(KeyPointer *kp, char *name, int value)
+{
+    char valueStr[100];
+    snprintf(valueStr, sizeof(valueStr), "%d", value); // Convert integer to string
+    initializeKeyPointer(kp, name, valueStr);
+}
+
 bool execute(KeyPointer *PCB)
 {
-    int *PC = &((PCB + 3)->value);
+    int intPC=parseInt((PCB + 3)->value);
     int lowerBound = parseInt((PCB + 4)->value);
-    char **lineSplitted = mySplit(memory.array[lowerBound + ((*PC)++)].value);
+    char **lineSplitted = mySplit(memory.array[lowerBound + ((intPC)++)].value);
+    sprintf(&((PCB + 3)->value),"%d",intPC);
     // what to do with first line
     if (strcmp(lineSplitted[0], "semWait") == 0)
     {
@@ -395,19 +410,7 @@ bool execute(KeyPointer *PCB)
     return 0; // Current Process good
 }
 
-void initializeKeyPointer(KeyPointer *kp, char *name, char *value)
-{
-    strncpy(kp->name, name, sizeof(kp->name) - 1);
-    kp->name[sizeof(kp->name) - 1] = '\0';
-    strncpy(kp->value, value, sizeof(kp->value) - 1);
-    kp->value[sizeof(kp->value) - 1] = '\0';
-}
-void initializeKeyPointerWithInt(KeyPointer *kp, char *name, int value)
-{
-    char valueStr[100];
-    snprintf(valueStr, sizeof(valueStr), "%d", value); // Convert integer to string
-    initializeKeyPointer(kp, name, valueStr);
-}
+
 
 KeyPointer *allocateProcess(char process[], int id)
 {
