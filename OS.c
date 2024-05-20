@@ -91,6 +91,23 @@ char **mySplit(char *str)
 
     return storeSplit;
 }
+char *getLine(const char *str) {
+    // Allocate memory for the result, considering the worst case where no '\r' is found
+    char *storeSplit = (char *)malloc(strlen(str) + 1);
+    if (storeSplit == NULL) {
+        perror("Failed to allocate memory");
+        exit(EXIT_FAILURE);
+    }
+
+    int i = 0;
+    while (str[i] != '\r' && str[i] != '\0') {
+        storeSplit[i] = str[i];
+        i++;
+    }
+    storeSplit[i] = '\0';
+
+    return storeSplit;
+}
 
 void parseIntoLines(char program[])
 {
@@ -114,7 +131,7 @@ void parseIntoLines(char program[])
         instruction[strcspn(instruction, "\n")] = '\0';
 
         // Copy the instruction to the value field
-        strncpy(kp.value, instruction, sizeof(kp.value) - 1);
+        strncpy(kp.value, getLine(instruction), sizeof(kp.value) - 1);
         kp.value[sizeof(kp.value) - 1] = '\0'; // Ensure null termination
 
         memory.array[memory.currentLoc++] = kp;
@@ -137,12 +154,12 @@ bool semWaitB(Mutex *m, KeyPointer *p,int quantum)
     {
         m->ownerID = parseInt(p->value);
         m->value = 0;
-        printf("Process %s acquired resource %s\n", p->value,m->name);
+        printf(GRN"Process %s acquired resource %s\n"RESET, p->value,m->name);
         flag = 0; // MAFEESH MOSHEKLA
     }
     else
     {
-        printf("Process %s is blocked waiting for resource %s\n", p->value,m->name);
+        printf(RED"Process %s is blocked waiting for resource %s\n"RESET, p->value,m->name);
         char* pcbState= (p + 2)->value;
         sprintf(pcbState,"%s","Blocked");
         int priority = parseInt((p + 3)->value);
@@ -162,7 +179,7 @@ KeyPointer *semSignalB(Mutex *m, KeyPointer *p)
     m->lock = 0;
     if (m->ownerID == parseInt(p->value))
     {
-        printf("Process %s released resource %s\n", p->value,m->name);
+        printf(GRN"Process %s released resource %s\n"RESET, p->value,m->name);
         if (isEmptyPriority(&m->queue))
         {
             m->value = 1;
@@ -174,7 +191,7 @@ KeyPointer *semSignalB(Mutex *m, KeyPointer *p)
             char* pcbState= (nextProcess + 2)->value;
             sprintf(pcbState,"%s","Ready");
             m->ownerID = parseInt(nextProcess->value);
-            printf("Process %d is unblocked and now owns resource %s\n", m->ownerID,m->name);
+            printf("Process %d is unblocked and now owns resource %s\n"RESET, m->ownerID,m->name);
             m->lock = 1;
             return nextProcess;
         }
@@ -324,7 +341,6 @@ bool execute(KeyPointer *PCB,int quantum)
                 initializeKeyPointer(&variable, lineSplitted[1], "10");
                 return 0;
             }
-            printf("Read %s from file: %s",file,x);
             // The third argument SEEK_END indicates that we want to move the file position indicator to the end of the file.
             // After this call, the file position indicator is at the end of the file.
             fseek(file, 0, SEEK_END);
@@ -344,7 +360,7 @@ bool execute(KeyPointer *PCB,int quantum)
             fread(buffer, 1, file_length, file);
             buffer[file_length] = '\0'; // Null-terminate the string
             fclose(file);
-
+            printf("Read %s from file: %s\n",buffer,x);
             // add the value which is inside the buffer to the variable
             initializeKeyPointer(&variable, lineSplitted[1], buffer);
         }
@@ -480,13 +496,13 @@ KeyPointer *allocateProcess(char process[], int id)
     KeyPointer lowerBound;
     KeyPointer upperBound;
 
-    initializeKeyPointerWithInt(&pID, "Process ID: ", pcb.processID);
-    initializeKeyPointerWithInt(&PC, "PC: ", pcb.PC);
-    initializeKeyPointerWithInt(&priority, "Current Priority: ", pcb.currentPriority);
+    initializeKeyPointerWithInt(&pID, "Process ID ", pcb.processID);
+    initializeKeyPointerWithInt(&PC, "PC ", pcb.PC);
+    initializeKeyPointerWithInt(&priority, "Current Priority ", pcb.currentPriority);
     initializeKeyPointerWithInt(&lowerBound, "Lower Bound", pcb.lowerBound);
     parseIntoLines(process);
     memory.currentLoc += 3;
-    initializeKeyPointerWithInt(&upperBound, "Upper Bound: ", memory.currentLoc - 1);
+    initializeKeyPointerWithInt(&upperBound, "Upper Bound ", memory.currentLoc - 1);
 
     KeyPointer *pIDkp = &memory.PCBs[memory.pcbPointer];
     // // allocating the PCB in the PCB's memory space
@@ -527,9 +543,9 @@ int getRemainingExecTime(KeyPointer *kp)
 
 int main()
 {
-    fileMutex.name = "fileMutex";
-    inputMutex.name = "inputMutex";
-    outputMutex.name = "outputMutex";
+    fileMutex.name = "file";
+    inputMutex.name = "userInput";
+    outputMutex.name = "userOutput";
     initializeMemory(&memory);
     initializeQueue(&readyQueue);
     initializeQueue(&blockedQueue);
@@ -550,9 +566,6 @@ int main()
         printf("Please input the arrivalTime time of program %d:\n", i + 1);
         scanf("%d", &arrivalTime[i]);
 
-        // program 1 --> 1
-        // program 2 --> 3
-        // program 3 --> 10
     }
 
     int i = 0;
@@ -563,7 +576,18 @@ int main()
     // implementing the scheduler
     do
     {
-        printf("Clock cycle %d --> %d\n", i, i + 1);
+        if(currPCB != NULL && getRemainingExecTime(currPCB)<0)
+        {
+            quantum=0;
+            char* pcbState= (currPCB + 2)->value;
+            printf(YEL"Process %d terminated\n"RESET,parseInt((currPCB)->value));
+            sprintf(pcbState,"%s","Terminated");
+            currPCB=NULL;
+            programCount--;
+        }
+
+        if (programCount>0)
+            printf(BLU"Clock cycle %d --> %d\n"RESET, i, i + 1);
 
         // check if any process arrived
         for (int j = 0; j < 3; j++)
@@ -594,22 +618,13 @@ int main()
             else if (parseInt((tempPCB + 3)->value) == 3)
             {
                 enqueue(&queue3, tempPCB);
-                printf("in queue 3\n");
+                printf(" in queue 3\n");
             }
             else
             {
                 enqueue(&queue4, tempPCB);
-                printf("in queue 4\n");
+                printf(" in queue 4\n");
             }
-        }
-
-        if(currPCB != NULL && getRemainingExecTime(currPCB)<0)
-        {
-            quantum=0;
-            char* pcbState= (currPCB + 2)->value;
-            sprintf(pcbState,"%s","Terminated");
-            currPCB=NULL;
-            programCount--;
         }
 
         // seeing which process will execute
@@ -672,14 +687,14 @@ int main()
                 //processExecuting = true;
             }
         }
-        bool processed;
+        bool processed=NULL;
         if(currPCB!=NULL) {
             printf(CYN"Execution Phase: \n"RESET);
             processed = execute(currPCB, quantum);
             quantum--;
             if (quantum == 0)
             {
-                printf(GRN"Quantum finished\n"RESET);
+                printf(MAG"Quantum finished\n"RESET);
             }
         }
         if (processed)
@@ -689,9 +704,14 @@ int main()
         }
         i++;
     } while (!isEmpty(&queue1) || !isEmpty(&queue2) || !isEmpty(&queue3) || !isEmpty(&queue4) || !isEmpty(&readyQueue) || !isEmpty(&blockedQueue) || currPCB!=NULL || programCount>0);
-    for (int i = 0; i < 60; i++)
+
+    printf(GRN"The main memory\n"RESET);
+    for (int i = 0; i < 18; i++)
     {
         printf("Name : %s , Value: %s\n", memory.PCBs[i].name, memory.PCBs[i].value);
+    }
+    for (int i =0 ; i<memory.currentLoc;i++) {
+        printf("Name : %s , Value: %s\n", memory.array[i].name, memory.array[i].value);
     }
     return 0;
 }
