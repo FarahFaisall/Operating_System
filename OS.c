@@ -241,7 +241,6 @@ bool execute(KeyPointer *PCB,int quantum)
     printf("Process with pID: %s is executing instruction: %s\n", PCB->value,memory.array[lowerBound + ((intPC))].value);
     char **lineSplitted = mySplit(memory.array[lowerBound + ((intPC)++)].value);
     sprintf(((PCB + 1)->value),"%d",intPC);
-    char* tempp = (PCB + 1)->value;
     // what to do with first line
     if (strcmp(lineSplitted[0], "semWait") == 0)
     {
@@ -614,7 +613,7 @@ int main()
         }
         if (!isEmpty(&readyQueue))
         {
-            printf(ORNG"Ready Queue After Arrival Of Procces(es)\n");
+            printf(ORNG"Ready Queue"")\n");
             display(&readyQueue);
             printf(RESET);
         }
@@ -690,12 +689,7 @@ int main()
             printf(CYN"Execution Phase: \n"RESET);
             blocked = execute(currPCB, quantum);
             quantum--;
-            if (blocked)
-            {
-                currPCB = NULL;
-                quantum = 0;
-            }
-            else if (quantum == 0)
+            if (quantum == 0 || getRemainingExecTime(currPCB)<0 )
             {
                 // INCREASE PRIORITY TO GO DOWN THE QUEUE LIST
                 // if (currPCB != NULL && processExecuting)
@@ -712,7 +706,7 @@ int main()
                     blocked=NULL;
 
                 }
-                 else
+                else if (!blocked)
                 {
                     char *priority = (currPCB + 3)->value;
                     int x = parseInt(priority);
@@ -725,19 +719,28 @@ int main()
                     {
                         enqueue(&queue2, currPCB);
                         printf(" in queue 2\n");
+                        strcpy((currPCB+2)->value,"Ready");
+
                     }
                     else if (parseInt(priority) == 3)
                     {
                         enqueue(&queue3, currPCB);
                         printf(" in queue 3\n");
+                        strcpy((currPCB+2)->value,"Ready");
+
                     }
                     else
                     {
                         enqueue(&queue4, currPCB);
                         printf(" in queue 4\n");
+                        strcpy((currPCB+2)->value,"Ready");
+
                     }
-                     strcpy((currPCB+2)->value,"Ready");
                 }
+            }
+            if (blocked) {
+                currPCB=NULL;
+                quantum=0;
             }
         }
         i++;
