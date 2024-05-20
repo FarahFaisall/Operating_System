@@ -238,7 +238,7 @@ bool execute(KeyPointer *PCB,int quantum)
 {
     int intPC=parseInt((PCB + 1)->value);
     int lowerBound = parseInt((PCB + 4)->value);
-    printf("Process with pID: %s is executing instruction: %s\n", PCB->value,memory.array[lowerBound + ((intPC))].value);
+    printf(YEL"Process with pID: %s is executing instruction: %s\n", PCB->value,memory.array[lowerBound + ((intPC))].value);
     char **lineSplitted = mySplit(memory.array[lowerBound + ((intPC)++)].value);
     sprintf(((PCB + 1)->value),"%d",intPC);
     // what to do with first line
@@ -613,7 +613,7 @@ int main()
         }
         if (!isEmpty(&readyQueue))
         {
-            printf(ORNG"Ready Queue"")\n");
+            printf(ORNG"Ready Queue""\n");
             display(&readyQueue);
             printf(RESET);
         }
@@ -693,7 +693,8 @@ int main()
             {
                 // INCREASE PRIORITY TO GO DOWN THE QUEUE LIST
                 // if (currPCB != NULL && processExecuting)
-                printf(MAG"Quantum finished\n"RESET);
+                if (quantum == 0)
+                    printf(MAG"Quantum finished\n"RESET);
                 if(getRemainingExecTime(currPCB)<0)
                 {
                     quantum=0;
