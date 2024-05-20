@@ -6,6 +6,7 @@
 #include "Queue.h"         // Include the header file
 #include "KeyPointer.h"
 #include "Utility.h"
+#define ORNG "\x1B[38;5;208m"
 #define RED   "\x1B[31m"
 #define GRN   "\x1B[32m"
 #define YEL   "\x1B[33m"
@@ -54,6 +55,22 @@ Queue queue1;
 Queue queue2;
 Queue queue3;
 Queue queue4;
+
+void printQueues() {
+    printf(ORNG"Ready Queue\n   ");
+    display(&readyQueue);
+    printf("Queue1\n   ");
+    display(&queue1);
+    printf("Queue2\n   ");
+    display(&queue2);
+    printf("Queue3\n   ");
+    display(&queue3);
+    printf("Queue4\n   ");
+    display(&queue4);
+    printf("Blocked Queue\n   ");
+    display(&blockedQueue);
+    printf(RESET);
+}
 
 char **mySplit(char *str)
 {
@@ -167,6 +184,7 @@ bool semWaitB(Mutex *m, KeyPointer *p,int quantum)
             sprintf((p+3)->value,"%d",++priority);
         }
         enqueuePriority(&m->queue, p, priority);
+        displayPriority(&m->queue);
         flag = 1; // FEEH MOSHKELA AKA Blocked
     }
     m->lock = 1;
@@ -187,6 +205,7 @@ KeyPointer *semSignalB(Mutex *m, KeyPointer *p)
         }
         else
         {
+            displayPriority(&m->queue);
             KeyPointer *nextProcess = dequeuePriority(&m->queue);
             char* pcbState= (nextProcess + 2)->value;
             sprintf(pcbState,"%s","Ready");
@@ -219,6 +238,7 @@ bool execute(KeyPointer *PCB,int quantum)
 {
     int intPC=parseInt((PCB + 1)->value);
     int lowerBound = parseInt((PCB + 4)->value);
+    printf("Process with pID: %s is executing instruction: %s\n", PCB->value,memory.array[lowerBound + ((intPC))].value);
     char **lineSplitted = mySplit(memory.array[lowerBound + ((intPC)++)].value);
     sprintf(((PCB + 1)->value),"%d",intPC);
     char* tempp = (PCB + 1)->value;
@@ -242,6 +262,7 @@ bool execute(KeyPointer *PCB,int quantum)
         {
             enqueue(&blockedQueue, PCB);
             printf(" in blocked queue\n");
+            printQueues();
             return 1; // Current Processs is blocked
         }
     }
@@ -576,16 +597,6 @@ int main()
     // implementing the scheduler
     do
     {
-        if(currPCB != NULL && getRemainingExecTime(currPCB)<0)
-        {
-            quantum=0;
-            char* pcbState= (currPCB + 2)->value;
-            printf(YEL"Process %d terminated\n"RESET,parseInt((currPCB)->value));
-            sprintf(pcbState,"%s","Terminated");
-            currPCB=NULL;
-            programCount--;
-        }
-
         if (programCount>0)
             printf(BLU"Clock cycle %d --> %d\n"RESET, i, i + 1);
 
@@ -601,6 +612,12 @@ int main()
                 printf(" in ready queue\n");
             }
         }
+        if (!isEmpty(&readyQueue))
+        {
+            printf(ORNG"Ready Queue After Arrival Of Procces(es)\n");
+            display(&readyQueue);
+            printf(RESET);
+        }
         while (!isEmpty(&readyQueue))
         {
             KeyPointer *tempPCB = dequeue(&readyQueue);
@@ -609,110 +626,134 @@ int main()
             {
                 enqueue(&queue1, tempPCB);
                 printf(" in queue 1\n");
+                printQueues();
             }
             else if (parseInt((tempPCB + 3)->value) == 2)
             {
                 enqueue(&queue2, tempPCB);
                 printf(" in queue 2\n");
+                printQueues();
             }
             else if (parseInt((tempPCB + 3)->value) == 3)
             {
                 enqueue(&queue3, tempPCB);
                 printf(" in queue 3\n");
+                printQueues();
             }
             else
             {
                 enqueue(&queue4, tempPCB);
                 printf(" in queue 4\n");
+                printQueues();
+
             }
         }
 
-        // seeing which process will execute
+        // seeing if in this clock cycle the scheduler should decide to execute a new process
         if (quantum == 0)
         {
-
-            // INCREASE PRIORITY TO GO DOWN THE QUEUE LIST
-            // if (currPCB != NULL && processExecuting)
-            if (currPCB != NULL)
-            {
-                char *priority = (currPCB + 3)->value;
-                int x = parseInt(priority);
-                if (x < 4)
-                {
-                    x++;
-                    sprintf(priority, "%d", x);
-                }
-                if (parseInt(priority) == 2)
-                {
-                    enqueue(&queue2, currPCB);
-                    printf(" in queue 2\n");
-                }
-                else if (parseInt(priority) == 3)
-                {
-                    enqueue(&queue3, currPCB);
-                    printf(" in queue 3\n");
-                }
-                else
-                {
-                    enqueue(&queue4, currPCB);
-                    printf(" in queue 4\n");
-                }
-            }
             if (!isEmpty(&queue1))
             {
                 currPCB = dequeue(&queue1);
                 printf(" from queue 1 to execute\n");
+                strcpy((currPCB+2)->value,"Running");
                 quantum = 1;
-                //processExecuting = true;
+                printQueues();
             }
             else if (!isEmpty(&queue2))
             {
                 currPCB = dequeue(&queue2);
                 printf(" from queue 2 to execute\n");
+                strcpy((currPCB+2)->value,"Running");
                 quantum = 2;
-                //processExecuting = true;
+                printQueues();
             }
             else if (!isEmpty(&queue3))
             {
                 currPCB = dequeue(&queue3);
                 printf(" from queue 3 to execute\n");
+                strcpy((currPCB+2)->value,"Running");
                 quantum = 4;
-                //processExecuting = true;
+                printQueues();
             }
             else if (!isEmpty(&queue4))
             {
                 currPCB = dequeue(&queue4);
                 printf(" from queue 4 to execute\n");
+                strcpy((currPCB+2)->value,"Running");
                 quantum=8;
-                //processExecuting = true;
+                printQueues();
             }
         }
-        bool processed=NULL;
+        bool blocked=NULL;
         if(currPCB!=NULL) {
             printf(CYN"Execution Phase: \n"RESET);
-            processed = execute(currPCB, quantum);
+            blocked = execute(currPCB, quantum);
             quantum--;
-            if (quantum == 0)
+            if (blocked)
             {
+                currPCB = NULL;
+                quantum = 0;
+            }
+            else if (quantum == 0)
+            {
+                // INCREASE PRIORITY TO GO DOWN THE QUEUE LIST
+                // if (currPCB != NULL && processExecuting)
                 printf(MAG"Quantum finished\n"RESET);
+                if(getRemainingExecTime(currPCB)<0)
+                {
+                    quantum=0;
+                    char* pcbState= (currPCB + 2)->value;
+                    printf(YEL"Process %d terminated\n"RESET,parseInt((currPCB)->value));
+                    sprintf(pcbState,"%s","Terminated");
+                    currPCB=NULL;
+                    programCount--;
+                    printQueues();
+                    blocked=NULL;
+
+                }
+                 else
+                {
+                    char *priority = (currPCB + 3)->value;
+                    int x = parseInt(priority);
+                    if (x < 4)
+                    {
+                        x++;
+                        sprintf(priority, "%d", x);
+                    }
+                    if (parseInt(priority) == 2)
+                    {
+                        enqueue(&queue2, currPCB);
+                        printf(" in queue 2\n");
+                    }
+                    else if (parseInt(priority) == 3)
+                    {
+                        enqueue(&queue3, currPCB);
+                        printf(" in queue 3\n");
+                    }
+                    else
+                    {
+                        enqueue(&queue4, currPCB);
+                        printf(" in queue 4\n");
+                    }
+                     strcpy((currPCB+2)->value,"Ready");
+                }
             }
         }
-        if (processed)
-        {
-            currPCB = NULL;
-            quantum = 0;
-        }
         i++;
+        printf(GRN"The main memory\n"RESET);
+
+        for (int j = 0; j < memory.pcbPointer; j++)
+        {
+            printf("Name : %s , Value: %s\n", memory.PCBs[j].name, memory.PCBs[j].value);
+        }
+        for (int j =0 ; j<memory.currentLoc;j++) {
+            printf("Name : %s , Value: %s\n", memory.array[j].name, memory.array[j].value);
+        }
+        printf("QUEUES AT THE END OF THE CLOCK CYCLE\n");
+        printQueues();
     } while (!isEmpty(&queue1) || !isEmpty(&queue2) || !isEmpty(&queue3) || !isEmpty(&queue4) || !isEmpty(&readyQueue) || !isEmpty(&blockedQueue) || currPCB!=NULL || programCount>0);
 
-    printf(GRN"The main memory\n"RESET);
-    for (int i = 0; i < 18; i++)
-    {
-        printf("Name : %s , Value: %s\n", memory.PCBs[i].name, memory.PCBs[i].value);
-    }
-    for (int i =0 ; i<memory.currentLoc;i++) {
-        printf("Name : %s , Value: %s\n", memory.array[i].name, memory.array[i].value);
-    }
     return 0;
 }
 

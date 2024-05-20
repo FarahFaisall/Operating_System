@@ -49,9 +49,9 @@ KeyPointer * dequeuePriority(PriorityQueue *pq) {
 void displayPriority(PriorityQueue *pq) {
     PriorityNode *temp = pq->front;
     if (isEmptyPriority(pq)) {
-        printf("Priority Queue is empty!\n");
+        printf("Mutex Priority Queue is empty!\n");
     } else {
-        printf("Priority Queue elements are:\n");
+        printf("Mutex Priority Queue elements are:\n");
         while (temp) {
             KeyPointer * item=temp->data;
             printf("Data: %s, Priority: %d\n",item->value , temp->priority);

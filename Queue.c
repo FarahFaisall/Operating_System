@@ -54,7 +54,7 @@ void display(Queue *q) {
     printf("Queue elements are: \n");
     while (temp) {
         KeyPointer* item=temp->data;
-        printf("%s ", item->value);
+        printf("PID: %s     ", item->value);
         temp = temp->next;
     }
     printf("\n");
